@@ -11,9 +11,12 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	List<ArrayList<Integer>> eventSubscriptors;
 	
 	int eventTrigger;
+	Cond notify;
 	
 	public GestorDeEventosMonitor(){
 		monitor = new Monitor();
+		notify = monitor.newCond();
+		
 		observerConditions = new Cond[ N_OBSERVADORES + 1 ];
 		eventSubscriptors = new ArrayList<ArrayList<Integer>>();
 		
@@ -35,6 +38,7 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 		
 		for( int pid : subscriptors ){
 			observerConditions[pid].signal();
+			notify.await();
 		}
 		
 		monitor.leave();
@@ -63,11 +67,9 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	@Override
 	public int escuchar(int pid) {
 		observerConditions[pid].await();
-		
-		monitor.enter();
 		int res = eventTrigger;
-		monitor.leave();
 		
+		notify.signal();
 		return res;
 	}
 
