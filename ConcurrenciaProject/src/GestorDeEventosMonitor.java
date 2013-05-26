@@ -6,12 +6,12 @@ import es.upm.babel.cclib.Monitor.Cond;
 
 public class GestorDeEventosMonitor implements GestorDeEventos {
 	
-	Monitor monitor;
-	Cond[] observerConditions;
-	List<ArrayList<Integer>> eventSubscriptors;
+	private final Monitor monitor;
+	private final Cond[] observerConditions;
+	private final List<ArrayList<Integer>> eventSubscriptors;
 	
-	int eventTrigger;
-	Cond notify;
+	private int eventTrigger;
+	private final Cond notify;
 	
 	public GestorDeEventosMonitor(){
 		monitor = new Monitor();
@@ -20,12 +20,8 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 		observerConditions = new Cond[ N_OBSERVADORES + 1 ];
 		eventSubscriptors = new ArrayList<ArrayList<Integer>>();
 		
-		for(int i=0; i<=observerConditions.length; i++){
+		for(int i=0; i<observerConditions.length; i++){
 			observerConditions[i] = monitor.newCond();
-		}
-		
-		for(int i=0; i<=N_EVENTOS; i++){
-			eventSubscriptors.add( i, new ArrayList<Integer>() );
 		}
 	}
 	
@@ -33,13 +29,14 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	public void emitir(int eid){
 		monitor.enter();
 		
-		eventTrigger = eid;
-		List<Integer> subscriptors = eventSubscriptors.get(eid);
-		
-		for( int pid : subscriptors ){
-			observerConditions[pid].signal();
-			notify.await();
-		}
+		try{
+			List<Integer> subscriptors = eventSubscriptors.get(eid);
+			eventTrigger = eid;
+			
+			for( int pid : subscriptors ){
+				observerConditions[pid].signal();
+			}
+		} catch(IndexOutOfBoundsException e){}
 		
 		monitor.leave();
 	}
@@ -48,7 +45,14 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	public void subscribir(int pid, int eid) {
 		monitor.enter();
 		
-		List<Integer> subscriptors = eventSubscriptors.get(eid);
+		List<Integer> subscriptors;
+		
+		try{
+			subscriptors = eventSubscriptors.get(eid);
+		} catch(IndexOutOfBoundsException e){
+			eventSubscriptors.add(eid, new ArrayList<Integer>());
+			subscriptors = eventSubscriptors.get(eid);
+		}
 		subscriptors.add(pid);
 		
 		monitor.leave();
@@ -58,18 +62,21 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	public void desubscribir(int pid, int eid) {
 		monitor.enter();
 		
-		List<Integer> subscriptors = eventSubscriptors.get(eid);
-		subscriptors.remove(pid);
+		try{
+			List<Integer> subscriptors = eventSubscriptors.get(eid);
+			subscriptors.remove(pid);
+		} catch(Exception e){}
 		
 		monitor.leave();
 	}
 
 	@Override
 	public int escuchar(int pid) {
+		monitor.enter();
+		
 		observerConditions[pid].await();
 		int res = eventTrigger;
-		
-		notify.signal();
+
 		return res;
 	}
 
