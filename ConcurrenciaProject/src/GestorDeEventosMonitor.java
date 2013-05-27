@@ -10,12 +10,10 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	private final Cond[] observerConditions;
 	private final List<ArrayList<Integer>> eventSubscriptors;
 	
-	private int eventTrigger;
-	private final Cond notify;
+	private volatile int eventTrigger;
 	
 	public GestorDeEventosMonitor(){
 		monitor = new Monitor();
-		notify = monitor.newCond();
 		
 		observerConditions = new Cond[ N_OBSERVADORES + 1 ];
 		eventSubscriptors = new ArrayList<ArrayList<Integer>>();
@@ -31,9 +29,9 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 		
 		try{
 			List<Integer> subscriptors = eventSubscriptors.get(eid);
-			eventTrigger = eid;
 			
 			for( int pid : subscriptors ){
+				eventTrigger = eid;
 				observerConditions[pid].signal();
 			}
 		} catch(IndexOutOfBoundsException e){}
@@ -50,10 +48,10 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 		try{
 			subscriptors = eventSubscriptors.get(eid);
 		} catch(IndexOutOfBoundsException e){
-			eventSubscriptors.add(eid, new ArrayList<Integer>());
-			subscriptors = eventSubscriptors.get(eid);
+			subscriptors = new ArrayList<Integer>();
+			eventSubscriptors.add(eid, (ArrayList<Integer>)subscriptors);
 		}
-		subscriptors.add(pid);
+		subscriptors.add(new Integer(pid));
 		
 		monitor.leave();
 	}
@@ -64,7 +62,7 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 		
 		try{
 			List<Integer> subscriptors = eventSubscriptors.get(eid);
-			subscriptors.remove(pid);
+			subscriptors.remove(new Integer(pid));
 		} catch(Exception e){}
 		
 		monitor.leave();
@@ -72,12 +70,13 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 
 	@Override
 	public int escuchar(int pid) {
-		monitor.enter();
-		
-		observerConditions[pid].await();
-		int res = eventTrigger;
-
-		return res;
+		try{
+			monitor.enter();
+			observerConditions[pid].await();
+			return eventTrigger;
+		} finally {
+			monitor.leave();
+		}
 	}
 
 }
