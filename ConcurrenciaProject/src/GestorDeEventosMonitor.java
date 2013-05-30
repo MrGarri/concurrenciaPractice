@@ -28,16 +28,17 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	 */
 	@Override
 	public void emitir(int eid){
-		monitor.enter();
+		monitor.enter(); //Se garantiza MUTEX
 		
 		for(int i=0; i<subscriptions[eid].length; i++){
 			if(subscriptions[eid][i]){
 				porEscuchar[eid][i] = true;
-				observerConditions[i].signal();
+				// Se despierta a los procesos en escucha.
+				observerConditions[i].signal(); 
 			}
 		}
 		
-		monitor.leave();
+		monitor.leave(); // Se sale de MUTEX
 	}
 
 	
@@ -49,11 +50,11 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	 */
 	@Override
 	public void subscribir(int pid, int eid) {
-		monitor.enter();
+		monitor.enter(); // Se garantiza MUTEX
 		
 		subscriptions[eid][pid] = true;
 		
-		monitor.leave();
+		monitor.leave(); // Se acaba MUTEX
 	}
 
 	
@@ -65,12 +66,12 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	 */
 	@Override
 	public void desubscribir(int pid, int eid) {
-		monitor.enter();
+		monitor.enter(); // Se garantiza MUTEX
 		
 		subscriptions[eid][pid] = false;
 		porEscuchar[eid][pid] = false;
 		
-		monitor.leave();
+		monitor.leave(); // Se acaba MUTEX
 	}
 
 	/**
@@ -83,8 +84,9 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	public int escuchar(int pid) {
 		
 		try{
-			monitor.enter();
+			monitor.enter(); // Se garantiza MUTEX
 			
+			// Se buscan eventos emitidos previamente a la espera de ser escuchados.
 			for(int i=0; i<subscriptions.length; i++){
 				if(subscriptions[i][pid] && porEscuchar[i][pid]){
 					porEscuchar[i][pid] = false;
@@ -92,9 +94,12 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 				}
 			}
 			
+			// Se espera a que un evento sea emitido.
 			observerConditions[pid].await();
 
 			int res=0;
+			
+			// Se busca el evento que acaba de ser emitido.
 			for(int i=0; i<subscriptions.length; i++){
 				if(subscriptions[i][pid] && porEscuchar[i][pid]){
 					porEscuchar[i][pid] = false;
@@ -103,7 +108,7 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 			}
 			return res;
 		} finally {
-			monitor.leave();
+			monitor.leave(); // Se acaba MUTEX
 		}
 	}
 
