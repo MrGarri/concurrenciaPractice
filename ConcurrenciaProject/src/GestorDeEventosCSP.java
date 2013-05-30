@@ -1,12 +1,12 @@
+import org.jcsp.lang.*;
+import org.jcsp.util.*;
 
-import org.jcsp.lang.CSProcess;
-import org.jcsp.lang.Parallel;
 
 public class GestorDeEventosCSP implements GestorDeEventos, CSProcess {
 	
 	public GestorDeEventosCSP() {
 		
-				
+		
 
 	}
  
@@ -36,7 +36,11 @@ public class GestorDeEventosCSP implements GestorDeEventos, CSProcess {
 
 	@Override
 	public void run() {
-		System.out.println("\n\n\nVAGINA\n\n\n");
+		
+		
+		
 	}
+
+	
 
 }
