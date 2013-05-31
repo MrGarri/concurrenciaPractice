@@ -37,7 +37,7 @@ public class GestorDeEventosCSP implements GestorDeEventos, CSProcess {
 	@Override
 	public void run() {
 		
-		
+		Any2AnyCallChannel o = new Any2AnyCallChannel();
 		
 	}
 
