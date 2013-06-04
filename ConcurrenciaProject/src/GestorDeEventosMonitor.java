@@ -29,12 +29,16 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 	@Override
 	public void emitir(int eid){
 		monitor.enter(); //Se garantiza MUTEX
+		boolean awaked = false;
 		
 		for(int i=0; i<subscriptions[eid].length; i++){
 			if(subscriptions[eid][i]){
 				porEscuchar[eid][i] = true;
-				// Se despierta a los procesos en escucha.
-				observerConditions[i].signal(); 
+				if(!awaked){
+				// Se despierta a el proceso en escucha.
+					observerConditions[i].signal();
+					awaked = true;
+				}
 			}
 		}
 		
@@ -100,10 +104,18 @@ public class GestorDeEventosMonitor implements GestorDeEventos {
 			int res=0;
 			
 			// Se busca el evento que acaba de ser emitido.
-			for(int i=0; i<subscriptions.length; i++){
+			for(int i=0; i<subscriptions.length && res==0; i++){
 				if(subscriptions[i][pid] && porEscuchar[i][pid]){
-					porEscuchar[i][pid] = false;
+					porEscuchar[i][pid] = false;			
 					res = i;
+					
+					for(int p=0; p<subscriptions[res].length; p++){
+						if(subscriptions[res][p]){
+							// Se despierta a el proceso en escucha.
+							observerConditions[p].signal();
+							break;
+						}
+					}
 				}
 			}
 			return res;
